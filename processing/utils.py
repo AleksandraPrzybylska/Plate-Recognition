@@ -101,7 +101,7 @@ def perform_processing(image: np.ndarray) -> str:
             x, y, w, h = cv2.boundingRect(c)  # This will find out co-ord for plate
             new_img = image[y:y + h, x:x + w]  # Create new image
             print(new_img.shape)
-            if new_img.shape[0] < 60 or new_img.shape[1] < 100 or new_img.shape[1] > 450:
+            if new_img.shape[0] < 60 or new_img.shape[1] < 100 or new_img.shape[1] >= 500   :
                 NumberPlateCnt = np.zeros((4, 1, 2))
                 print("zle wymiary")
             else:
@@ -159,7 +159,7 @@ def perform_processing(image: np.ndarray) -> str:
         gray_2 = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         gray_2 = cv2.bilateralFilter(gray_2, 10, 28, 28 )
         # gray_2 = cv2.bilateralFilter(gray_2, 11, 20, 20)
-        edged_2 = cv2.Canny(gray_2, 20, 200)
+        edged_2 = cv2.Canny(gray_2, 25, 285)
         # edged_2 = cv2.Canny(gray_2, 60, 300)
         cnts = cv2.findContours(edged_2.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         cnts = cnts[0] if len(cnts) == 2 else cnts[1]
@@ -266,8 +266,8 @@ def perform_processing(image: np.ndarray) -> str:
         my_roi[i] = img_erosion
 
 
-    for i in range(len(my_roi)):
-        cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/roi" + str(i) + ".jpg", my_roi[i])
+    # for i in range(len(my_roi)):
+    #     cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/roi" + str(i) + ".jpg", my_roi[i])
 
     cv2.destroyAllWindows()
 
