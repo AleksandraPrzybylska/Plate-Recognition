@@ -72,11 +72,9 @@ def perform_processing(image: np.ndarray) -> str:
 
     # Noise removal with iterative bilateral filter(removes noise while preserving edges)
     bilateral = cv2.bilateralFilter(gray, 11, 20, 20)
-    # bilateral = cv2.bilateralFilter(gray, 11, 17, 17)
 
     # Find Edges of the grayscale image
     edged = cv2.Canny(bilateral, 50, 200)
-    # edged = cv2.Canny(bilateral, 50, 200)
 
     # Find contours based on Edges
     cnts = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -143,11 +141,12 @@ def perform_processing(image: np.ndarray) -> str:
 
         cv2.imshow("roi", new_img)
         cv2.waitKey(0)
-        new_img = imutils.resize(new_img, width=min(500, len(image[0])))
+        # new_img = imutils.resize(new_img, width=min(500, len(image[0])))
         new_copy = np.copy(new_img)
         gray_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2GRAY)
-        gray_img = cv2.bilateralFilter(gray_img, 11, 35, 35)
-        canny = cv2.Canny(gray_img, 50, 200)
+        # gray_img = cv2.bilateralFilter(gray_img, 11, 35, 35)
+        gray_img = cv2.bilateralFilter(gray_img, 10,  28, 28)
+        canny = cv2.Canny(gray_img, 30, 200)
 
         cnts = cv2.findContours(canny.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         cnts = cnts[0] if len(cnts) == 2 else cnts[1]
@@ -157,10 +156,12 @@ def perform_processing(image: np.ndarray) -> str:
     else:
         print("not found")
         # image = imutils.resize(image, width=min(700, len(image[0])))
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        gray = cv2.bilateralFilter(gray, 11, 20, 20)
-        edged = cv2.Canny(gray, 60, 300)
-        cnts = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        gray_2 = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray_2 = cv2.bilateralFilter(gray_2, 10, 28, 28 )
+        # gray_2 = cv2.bilateralFilter(gray_2, 11, 20, 20)
+        edged_2 = cv2.Canny(gray_2, 20, 200)
+        # edged_2 = cv2.Canny(gray_2, 60, 300)
+        cnts = cv2.findContours(edged_2.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         cnts = cnts[0] if len(cnts) == 2 else cnts[1]
         (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
 
@@ -170,11 +171,12 @@ def perform_processing(image: np.ndarray) -> str:
         rect = cv2.boundingRect(contour)
         (x, y, w, h) = cv2.boundingRect(contour)
 
-        if cv2.contourArea(contour) >= 17.0:#  and cv2.contourArea(contour) <= 100.0 or cv2.contourArea(contour) >= 100.0:
+        if cv2.contourArea(contour) >= 0.0:#  and cv2.contourArea(contour) <= 100.0 or cv2.contourArea(contour) >= 100.0:
             if w / h >= 1.0:
                 continue
             else:
-                if w < 15 or h < 35:  # if it finds smaller parts, just ignore them
+                # if w < 15 or h < 35:  # if it finds smaller parts, just ignore them
+                if w <= 10 or h < 34:
                     continue
                 else:
                     # previous_M = cv2.moments(contour)
@@ -213,43 +215,46 @@ def perform_processing(image: np.ndarray) -> str:
                         cv2.waitKey(0)
 
                     else:
-                        last_one = my_roi[-1]
-                        last_red = np.sum(last_one[:, :, 2])
-                        last_green = np.sum(last_one[:, :, 1])
-                        last_blue = np.sum(last_one[:, :, 0])
+                        # last_one = my_roi[-1]
+                        # last_red = np.sum(last_one[:, :, 2])
+                        # last_green = np.sum(last_one[:, :, 1])
+                        # last_blue = np.sum(last_one[:, :, 0])
+                        #
+                        # current_red = np.sum(red)
+                        # current_green = np.sum(green)
+                        # current_blue = np.sum(blue)
+                        # if (last_red == current_red and last_green == current_green and   last_blue == current_blue):
+                        #     continue
+                        # else:
+                        acc_M = cv2.moments(contour)
 
-                        current_red = np.sum(red)
-                        current_green = np.sum(green)
-                        current_blue = np.sum(blue)
-                        if (last_red == current_red and last_green == current_green and last_blue == current_blue):
-                            continue
-                        else:
-                            acc_M = cv2.moments(contour)
+                        if acc_M["m00"] != 0.0:
                             acc_cX = int(acc_M["m10"] / acc_M["m00"])
                             acc_cY = int(acc_M["m01"] / acc_M["m00"])
+                        else:
+                            acc_cX = 0
+                            acc_cY = 0
 
-                            if prev_x <= acc_cX <= prev_x + prev_w and prev_y <= acc_cY <= prev_y + prev_h:
-                                continue
-                            else:
+                        if prev_x <= acc_cX <= prev_x + prev_w and prev_y <= acc_cY <= prev_y + prev_h:
+                            continue
+                        else:
 
-                                my_roi.append(crop_image)
-                                # previous_M = cv2.moments(contour)
-                                # prev_cX = int(previous_M["m10"] / previous_M["m00"])
-                                # prev_cY = int(previous_M["m01"] / previous_M["m00"])
-                                prev_w = w
-                                prev_h = h
-                                prev_x = x
-                                prev_y = y
+                            my_roi.append(crop_image)
+                            # previous_M = cv2.moments(contour)
+                            # prev_cX = int(previous_M["m10"] / previous_M["m00"])
+                            # prev_cY = int(previous_M["m01"] / previous_M["m00"])
+                            prev_w = w
+                            prev_h = h
+                            prev_x = x
+                            prev_y = y
 
-
-                                cv2.rectangle(img_copy, (x, y), (x + w, y + h), (70, 0, 70), 3)  # drawing rectangle
-                                cv2.imshow("img_cpy", img_copy)
-                                print("rozmiar: w:", w, "h:", h)
-                                cv2.waitKey(0)
+                            cv2.rectangle(img_copy, (x, y), (x + w, y + h), (70, 0, 70), 3)  # drawing rectangle
+                            cv2.imshow("img_cpy", img_copy)
+                            print("rozmiar: w:", w, "h:", h)
+                            cv2.waitKey(0)
 
     # dim = (20, 32)
     dim = (40, 70)
-    suma_pixeli = 0
     kernel = np.ones((3, 3), np.uint8)
     for i in range(len(my_roi)):
         # my_roi[i] = cv2.resize(my_roi[i], dim)
@@ -258,9 +263,7 @@ def perform_processing(image: np.ndarray) -> str:
 
         img_dilation = cv2.dilate(thresh, kernel, iterations=1)
         img_erosion = cv2.erode(img_dilation, kernel, iterations=1)
-        suma_pixeli += np.sum(img_erosion)
         my_roi[i] = img_erosion
-        # my_roi[i] = img_dilation
 
 
     for i in range(len(my_roi)):
