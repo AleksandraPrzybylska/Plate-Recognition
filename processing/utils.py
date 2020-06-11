@@ -106,7 +106,7 @@ def perform_processing(image: np.ndarray) -> str:
                 print("zle wymiary")
             else:
                 idx += 1
-                cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/wycinek_tablicy.jpg", new_img)
+                # cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/wycinek_tablicy.jpg", new_img)
 
             break
 
@@ -152,7 +152,7 @@ def perform_processing(image: np.ndarray) -> str:
         cnts = cnts[0] if len(cnts) == 2 else cnts[1]
         (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
         img_copy = new_copy
-
+                                
     else:
         print("not found")
         # image = imutils.resize(image, width=min(700, len(image[0])))
@@ -176,7 +176,7 @@ def perform_processing(image: np.ndarray) -> str:
                 continue
             else:
                 # if w < 15 or h < 35:  # if it finds smaller parts, just ignore them
-                if w <= 10 or h < 34:
+                if w <= 10                  or h < 34 or h > 100:
                     continue
                 else:
                     # previous_M = cv2.moments(contour)
@@ -265,9 +265,17 @@ def perform_processing(image: np.ndarray) -> str:
         img_erosion = cv2.erode(img_dilation, kernel, iterations=1)
         my_roi[i] = img_erosion
 
+    if len(my_roi) != 7:
+        for idx, elem in enumerate(my_roi):
+            if my_roi[idx].shape[1] < 12:
+                my_roi.pop(idx)
+            if my_roi[idx].shape[0] / my_roi[idx].shape[1] >= 1.1:
+                continue
+            else:
+                my_roi.pop(idx)
 
-    # for i in range(len(my_roi)):
-    #     cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/roi" + str(i) + ".jpg", my_roi[i])
+        for i in range(len(my_roi)):
+            cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/roi" + str(i) + ".jpg", my_roi[i])
 
     cv2.destroyAllWindows()
 
