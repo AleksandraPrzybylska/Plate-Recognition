@@ -58,17 +58,16 @@ def four_point_transform(image, pts):
 	return warped
 
 def loop_find_plate(cnts, img_copy):
-    i = 0
+    # i = 0
     my_roi = []
     for contour in cnts:
         (x, y, w, h) = cv2.boundingRect(contour)
 
         if cv2.contourArea(
-                contour) >= 0.0:  # and cv2.contourArea(contour) <= 100.0 or cv2.contourArea(contour) >= 100.0:
+                contour) >= 0.0:
             if w / h >= 1.0 or h/w >= 5.0:
                 continue
             else:
-                # if w < 15 or h < 35:  # if it finds smaller parts, just ignore them
                 if w <= 10 or h < 34 or w > 73:
                     continue
                 else:
@@ -83,7 +82,6 @@ def loop_find_plate(cnts, img_copy):
                         prev_h = h
                         prev_x = x
                         prev_y = y
-
                         # cv2.rectangle(img_copy, (x, y), (x + w, y + h), (70, 0, 70), 3)  # drawing rectangle
                         # cv2.imshow("img_cpy", img_copy)
                         # print("rozmiar: w:", w, "h:", h)
@@ -116,36 +114,25 @@ def loop_find_plate(cnts, img_copy):
                             # cv2.waitKey(0)
     return my_roi
 
-def perform_processing(image: np.ndarray) -> str:
-    print(f'image.shape: {image.shape}')
-    # TODO: add image processing here
-    # Resize the image - change width to 500
-    image = imutils.resize(image, width=min(500, len(image[0])))
-    # image = imutils.resize(image, width=min(700, len(image[0])))
-    img_copy = np.copy(image)
-    # Display the original image
-    cv2.imshow("Original Image", image)
-    cv2.waitKey(0)
-
-    # RGB to Gray scale conversion
+def get_contours(image, bil1, bil2, bil3, canny1, canny2):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    # Noise removal with iterative bilateral filter(removes noise while preserving edges)
-    bilateral = cv2.bilateralFilter(gray, 11, 20, 20)
-
-    # Find Edges of the grayscale image
-    edged = cv2.Canny(bilateral, 50, 200)
-
-    # Find contours based on Edges
+    bilateral = cv2.bilateralFilter(gray, bil1, bil2, bil3)
+    edged = cv2.Canny(bilateral, canny1, canny2)
     cnts = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     cnts = cnts[0] if len(cnts) == 2 else cnts[1]
 
-    # Create copy of original image to draw all contours
-    img1 = image.copy()
-    cv2.drawContours(img1, cnts, -1, (0, 255, 0), 3)
-    # cv2.imshow("4- All Contours", img1)
-    # cv2.waitKey(0)
+    return cnts
 
+def perform_processing(image: np.ndarray) -> str:
+    print(f'image.shape: {image.shape}')
+    # TODO: add image processing here
+
+    image = imutils.resize(image, width=min(500, len(image[0])))
+    img_copy = np.copy(image)
+    cv2.imshow("Original Image", image)
+    cv2.waitKey(0)
+
+    cnts = get_contours(image, 11, 20, 20, 50, 200)
     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
     NumberPlateCnt = np.zeros((4, 1, 2))
 
@@ -153,28 +140,20 @@ def perform_processing(image: np.ndarray) -> str:
     for c in cnts:
         peri = cv2.arcLength(c, True)
         approx = cv2.approxPolyDP(c, 0.02 * peri, True)
-        # print ("approx = ",approx)
-        if len(approx) == 4:  # Select the contour with 4 corners
-            NumberPlateCnt = approx  # This is our approx Number Plate Contour
-
-            # Crop those contours and store it in Cropped Images folder
-            x, y, w, h = cv2.boundingRect(c)  # This will find out co-ord for plate
-            new_img = image[y:y + h, x:x + w]  # Create new image
-            print(new_img.shape)
+        if len(approx) == 4:
+            NumberPlateCnt = approx
+            x, y, w, h = cv2.boundingRect(c)
+            new_img = image[y:y + h, x:x + w]
             if new_img.shape[0] < 60 or new_img.shape[1] < 100 or new_img.shape[1] >= 500:
                 NumberPlateCnt = np.zeros((4, 1, 2))
-                print("zle wymiary")
             else:
                 idx += 1
-                # cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/wycinek_tablicy.jpg", new_img)
-
             break
 
     if np.sum(NumberPlateCnt):
         warped = four_point_transform(image, NumberPlateCnt.reshape(4, 2))
-        # cv2.imshow("warped", warped)
 
-        number = NumberPlateCnt.reshape(4,2)
+        number = NumberPlateCnt.reshape(4, 2)
         arr = []
         check = False
         a = [number[0][0], number[0][1]]
@@ -196,146 +175,49 @@ def perform_processing(image: np.ndarray) -> str:
             new_img = new_img
 
         cv2.drawContours(image, [NumberPlateCnt], -1, (0, 255, 0), 3)
-        # cv2.imshow("Final Image With Number Plate Detected", image)
-        # cv2.waitKey(0)
 
-        # cv2.imshow("roi", new_img)
-        # cv2.waitKey(0)
-        # new_img = imutils.resize(new_img, width=min(500, len(image[0])))
         new_copy = np.copy(new_img)
-        gray_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2GRAY)
-        # gray_img = cv2.bilateralFilter(gray_img, 11, 35, 35)
-        gray_img = cv2.bilateralFilter(gray_img, 10,  28, 28)
-        canny = cv2.Canny(gray_img, 30, 200)
-
-        cnts = cv2.findContours(canny.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+        cnts = get_contours(new_img, 10, 28, 28, 24, 200)
         (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
         img_copy = new_copy
-                                
+
     else:
-        print("not found")
-        # image = imutils.resize(image, width=min(700, len(image[0])))
-        gray_2 = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        gray_2 = cv2.bilateralFilter(gray_2, 10, 28, 28 )
-        # gray_2 = cv2.bilateralFilter(gray_2, 11, 20, 20)
-        edged_2 = cv2.Canny(gray_2, 25, 285)
-        # edged_2 = cv2.Canny(gray_2, 60, 300)
-        cnts = cv2.findContours(edged_2.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+        cnts = get_contours(image, 10, 28, 28, 25, 285)
         (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
 
-    # i = 0
-    # my_roi = []
-    # for contour in cnts:
-    #     rect = cv2.boundingRect(contour)
-    #     (x, y, w, h) = cv2.boundingRect(contour)
-    #
-    #     if cv2.contourArea(contour) >= 0.0:#  and cv2.contourArea(contour) <= 100.0 or cv2.contourArea(contour) >= 100.0:
-    #         if w / h >= 1.0:
-    #             continue
-    #         else:
-    #             # if w < 15 or h < 35:  # if it finds smaller parts, just ignore them
-    #             if w <= 10 or h < 34 or h > 100:
-    #                 continue
-    #             else:
-    #
-    #                 crop_image = img_copy[y:y + h, x:x + w]
-    #                 red = crop_image[:, :, 2]
-    #                 green = crop_image[:, :, 1]
-    #                 blue = crop_image[:, :, 0]
-    #
-    #                 if not (len(my_roi)):
-    #
-    #                     my_roi.append(crop_image)
-    #
-    #                     # cv2.rectangle(img_copy, (x, y), (x + w, y + h), (70, 0, 70), 3)  # drawing rectangle
-    #                     # cv2.imshow("img_cpy", img_copy)
-    #                     # print("rozmiar: w:", w, "h:", h)
-    #                     # cv2.waitKey(0)
-    #                     prev_w = w
-    #                     prev_h = h
-    #                     prev_x = x
-    #                     prev_y = y
-    #
-    #                     cv2.rectangle(img_copy, (x, y), (x + w, y + h), (70, 0, 70), 3)  # drawing rectangle
-    #                     cv2.imshow("img_cpy", img_copy)
-    #                     print("rozmiar: w:", w, "h:", h)
-    #                     cv2.waitKey(0)
-    #
-    #                 else:
-    #                     acc_M = cv2.moments(contour)
-    #
-    #                     if acc_M["m00"] != 0.0:
-    #                         acc_cX = int(acc_M["m10"] / acc_M["m00"])
-    #                         acc_cY = int(acc_M["m01"] / acc_M["m00"])
-    #                     else:
-    #                         acc_cX = 0
-    #                         acc_cY = 0
-    #
-    #                     if prev_x <= acc_cX <= prev_x + prev_w and prev_y <= acc_cY <= prev_y + prev_h:
-    #                         continue
-    #                     else:
-    #
-    #                         my_roi.append(crop_image)
-    #                         prev_w = w
-    #                         prev_h = h
-    #                         prev_x = x
-    #                         prev_y = y
-    #
-    #                         cv2.rectangle(img_copy, (x, y), (x + w, y + h), (70, 0, 70), 3)  # drawing rectangle
-    #                         cv2.imshow("img_cpy", img_copy)
-    #                         print("rozmiar: w:", w, "h:", h)
-    #                         cv2.waitKey(0)
 
-    # dim = (20, 32)
-    # dim = (40, 70)
-
+    # letters = []
     my_roi = loop_find_plate(cnts, img_copy)
-    # kernel = np.ones((3, 3), np.uint8)
-    # for i in range(len(my_roi)):
-    #     # my_roi[i] = cv2.resize(my_roi[i], dim)
-    #     gray = cv2.cvtColor(my_roi[i], cv2.COLOR_BGR2GRAY)
-    #     thresh1 = cv2.threshold(gray, 125,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)[1]
-    #     my_roi[i] = thresh1
 
     if len(my_roi) == 7:
-        for i in range(len(my_roi)):
-            gray = cv2.cvtColor(my_roi[i], cv2.COLOR_BGR2GRAY)
-            thresh1 = cv2.threshold(gray, 125, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-            cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/roi" + str(i) + ".jpg", thresh1)
+        letters = my_roi
     else:
-        gray_3 = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        gray_3 = cv2.bilateralFilter(gray_3, 10, 28, 28)
-        edged_3 = cv2.Canny(gray_3, 200, 545)
-        cnts = cv2.findContours(edged_3.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        cnts = cnts[0] if len(cnts) == 2 else cnts[1]
-        (cnts, _) = contours.sort_contours(cnts, method="le ft-to-right")
+        cnts = get_contours(image, 10, 28, 28, 200, 545)
+        (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
         new_roi = loop_find_plate(cnts, img_copy)
 
         if len(new_roi) == 7:
-            for i in range(len(new_roi)):
-                gray = cv2.cvtColor(new_roi[i], cv2.COLOR_BGR2GRAY)
-                thresh1 = cv2.threshold(gray, 125, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-                cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/roi" + str(i) + ".jpg", thresh1)
-
+            letters = new_roi
         else:
-
-            gray_4 = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            gray_4 = cv2.bilateralFilter(gray_4, 10, 28, 28)
-            edged_4 = cv2.Canny(gray_4, 200, 600)
-            cnts = cv2.findContours(edged_4.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+            cnts = get_contours(image, 10, 28, 28, 60, 600)
             (cnts, _) = contours.sort_contours(cnts, method="le ft-to-right")
             next_roi = loop_find_plate(cnts, img_copy)
 
+            letters = []
+
             for i in range(len(next_roi)):
-                gray = cv2.cvtColor(next_roi[i], cv2.COLOR_BGR2GRAY)
-                thresh1 = cv2.threshold(gray, 125, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-                cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/roi" + str(i) + ".jpg", thresh1)
+                x = next_roi[i].shape[0] / next_roi[i].shape[1]
+                if x >= 4.0 or x <= 1.24:
+                    continue
+                else:
+                    letters.append(next_roi[i])
+    dim = (20, 32)
 
-
-
+    for i in range(len(letters)):
+        letters[i] = cv2.resize(letters[i], dim)
+        gray = cv2.cvtColor(letters[i], cv2.COLOR_BGR2GRAY)
+        thresh1 = cv2.threshold(gray, 125, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+        cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/roi" + str(i) + ".jpg", thresh1)
 
     cv2.destroyAllWindows()
 
