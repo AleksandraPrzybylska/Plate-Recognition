@@ -69,7 +69,7 @@ def loop_find_plate(cnts, img_copy):
                 continue
             else:
                 # if w < 15 or h < 35:  # if it finds smaller parts, just ignore them
-                if w <= 10 or h < 34:
+                if w <= 10 or h < 34 or w > 73:
                     continue
                 else:
 
@@ -307,45 +307,34 @@ def perform_processing(image: np.ndarray) -> str:
     else:
         gray_3 = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         gray_3 = cv2.bilateralFilter(gray_3, 10, 28, 28)
-        edged_3 = cv2.Canny(gray_3, 25, 400)
+        edged_3 = cv2.Canny(gray_3, 200, 545)
         cnts = cv2.findContours(edged_3.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         cnts = cnts[0] if len(cnts) == 2 else cnts[1]
         (cnts, _) = contours.sort_contours(cnts, method="le ft-to-right")
         new_roi = loop_find_plate(cnts, img_copy)
 
         if len(new_roi) == 7:
-            for i in range(len(my_roi)):
+            for i in range(len(new_roi)):
                 gray = cv2.cvtColor(new_roi[i], cv2.COLOR_BGR2GRAY)
                 thresh1 = cv2.threshold(gray, 125, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
                 cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/roi" + str(i) + ".jpg", thresh1)
 
         else:
-            for i in range(len(new_roi)):
-                # if 30 < new_roi[i].shape[0] < 65:
-                #     print("i", i, "rozmiar", new_roi[i].shape)
-                gray = cv2.cvtColor(new_roi[i], cv2.COLOR_BGR2GRAY)
+
+            gray_4 = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            gray_4 = cv2.bilateralFilter(gray_4, 10, 28, 28)
+            edged_4 = cv2.Canny(gray_4, 200, 600)
+            cnts = cv2.findContours(edged_4.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+            (cnts, _) = contours.sort_contours(cnts, method="le ft-to-right")
+            next_roi = loop_find_plate(cnts, img_copy)
+
+            for i in range(len(next_roi)):
+                gray = cv2.cvtColor(next_roi[i], cv2.COLOR_BGR2GRAY)
                 thresh1 = cv2.threshold(gray, 125, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-                print("img_shape_here #################")
-                print(new_roi[i].shape)
                 cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/roi" + str(i) + ".jpg", thresh1)
 
 
-
-
-
-
-
-
-
-    # if len(my_roi) != 7:
-    #     for idx, elem in enumerate(my_roi):
-    #         if my_roi[idx].shape[1] < 12:
-    #             my_roi.pop(idx)
-    #         if my_roi[idx].shape[0] / my_roi[idx].shape[1] >= 1.1:
-    #             continue
-    #         else:
-    #             my_roi.pop(idx)
-    # else:
 
 
     cv2.destroyAllWindows()
