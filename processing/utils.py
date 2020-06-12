@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import imutils
 from imutils import contours
+from skimage.filters import threshold_local
 
 def order_points(pts):
 	# initialzie a list of coordinates that will be ordered
@@ -56,6 +57,65 @@ def four_point_transform(image, pts):
 	# return the warped image
 	return warped
 
+def loop_find_plate(cnts, img_copy):
+    i = 0
+    my_roi = []
+    for contour in cnts:
+        (x, y, w, h) = cv2.boundingRect(contour)
+
+        if cv2.contourArea(
+                contour) >= 0.0:  # and cv2.contourArea(contour) <= 100.0 or cv2.contourArea(contour) >= 100.0:
+            if w / h >= 1.0 or h/w >= 5.0:
+                continue
+            else:
+                # if w < 15 or h < 35:  # if it finds smaller parts, just ignore them
+                if w <= 10 or h < 34:
+                    continue
+                else:
+
+                    crop_image = img_copy[y:y + h, x:x + w]
+
+                    if not (len(my_roi)):
+
+                        my_roi.append(crop_image)
+
+                        prev_w = w
+                        prev_h = h
+                        prev_x = x
+                        prev_y = y
+
+                        # cv2.rectangle(img_copy, (x, y), (x + w, y + h), (70, 0, 70), 3)  # drawing rectangle
+                        # cv2.imshow("img_cpy", img_copy)
+                        # print("rozmiar: w:", w, "h:", h)
+                        # cv2.waitKey(0)
+
+                    else:
+
+                        acc_M = cv2.moments(contour)
+                        if acc_M["m00"] != 0.0:
+                            acc_cX = int(acc_M["m10"] / acc_M["m00"])
+                            acc_cY = int(acc_M["m01"] / acc_M["m00"])
+                        else:
+                            acc_cX = 0
+                            acc_cY = 0
+
+                        if prev_x <= acc_cX <= prev_x + prev_w and prev_y <= acc_cY <= prev_y + prev_h:
+                            continue
+                        else:
+
+                            my_roi.append(crop_image)
+
+                            prev_w = w
+                            prev_h = h
+                            prev_x = x
+                            prev_y = y
+
+                            # cv2.rectangle(img_copy, (x, y), (x + w, y + h), (70, 0, 70), 3)  # drawing rectangle
+                            # cv2.imshow("img_cpy", img_copy)
+                            # print("rozmiar: w:", w, "h:", h)
+                            # cv2.waitKey(0)
+    return my_roi
+
 def perform_processing(image: np.ndarray) -> str:
     print(f'image.shape: {image.shape}')
     # TODO: add image processing here
@@ -101,7 +161,7 @@ def perform_processing(image: np.ndarray) -> str:
             x, y, w, h = cv2.boundingRect(c)  # This will find out co-ord for plate
             new_img = image[y:y + h, x:x + w]  # Create new image
             print(new_img.shape)
-            if new_img.shape[0] < 60 or new_img.shape[1] < 100 or new_img.shape[1] >= 500   :
+            if new_img.shape[0] < 60 or new_img.shape[1] < 100 or new_img.shape[1] >= 500:
                 NumberPlateCnt = np.zeros((4, 1, 2))
                 print("zle wymiary")
             else:
@@ -139,8 +199,8 @@ def perform_processing(image: np.ndarray) -> str:
         # cv2.imshow("Final Image With Number Plate Detected", image)
         # cv2.waitKey(0)
 
-        cv2.imshow("roi", new_img)
-        cv2.waitKey(0)
+        # cv2.imshow("roi", new_img)
+        # cv2.waitKey(0)
         # new_img = imutils.resize(new_img, width=min(500, len(image[0])))
         new_copy = np.copy(new_img)
         gray_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2GRAY)
@@ -165,117 +225,128 @@ def perform_processing(image: np.ndarray) -> str:
         cnts = cnts[0] if len(cnts) == 2 else cnts[1]
         (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
 
-    i = 0
-    my_roi = []
-    for contour in cnts:
-        rect = cv2.boundingRect(contour)
-        (x, y, w, h) = cv2.boundingRect(contour)
-
-        if cv2.contourArea(contour) >= 0.0:#  and cv2.contourArea(contour) <= 100.0 or cv2.contourArea(contour) >= 100.0:
-            if w / h >= 1.0:
-                continue
-            else:
-                # if w < 15 or h < 35:  # if it finds smaller parts, just ignore them
-                if w <= 10                  or h < 34 or h > 100:
-                    continue
-                else:
-                    # previous_M = cv2.moments(contour)
-                    # prev_cX = int(previous_M["m10"] / previous_M["m00"])
-                    # prev_cY = int(previous_M["m01"] / previous_M["m00"])
-
-                    # cv2.circle(img_copy, (cX, cY), 7, (255, 255, 255), thickness=1)
-                    # print("############################")
-                    # cv2.rectangle(img_copy, (x, y), (x + w, y + h), (70, 0, 70), 3) #drawing rectangle
-                    # cv2.imshow("img_cpy", img_copy)
-                    # print("rozmiar: w:", w, "h:", h)
-                    # cv2.waitKey(0)
-                    crop_image = img_copy[y:y + h, x:x + w]
-                    red = crop_image[:, :, 2]
-                    green = crop_image[:, :, 1]
-                    blue = crop_image[:, :, 0]
-
-                    if not (len(my_roi)):
-
-                        my_roi.append(crop_image)
-                        # previous_M = cv2.moments(contour)
-                        # prev_cX = int(previous_M["m10"] / previous_M["m00"])
-                        # prev_cY = int(previous_M["m01"] / previous_M["m00"])
-                        # cv2.rectangle(img_copy, (x, y), (x + w, y + h), (70, 0, 70), 3)  # drawing rectangle
-                        # cv2.imshow("img_cpy", img_copy)
-                        # print("rozmiar: w:", w, "h:", h)
-                        # cv2.waitKey(0)
-                        prev_w = w
-                        prev_h = h
-                        prev_x = x
-                        prev_y = y
-
-                        cv2.rectangle(img_copy, (x, y), (x + w, y + h), (70, 0, 70), 3)  # drawing rectangle
-                        cv2.imshow("img_cpy", img_copy)
-                        print("rozmiar: w:", w, "h:", h)
-                        cv2.waitKey(0)
-
-                    else:
-                        # last_one = my_roi[-1]
-                        # last_red = np.sum(last_one[:, :, 2])
-                        # last_green = np.sum(last_one[:, :, 1])
-                        # last_blue = np.sum(last_one[:, :, 0])
-                        #
-                        # current_red = np.sum(red)
-                        # current_green = np.sum(green)
-                        # current_blue = np.sum(blue)
-                        # if (last_red == current_red and last_green == current_green and   last_blue == current_blue):
-                        #     continue
-                        # else:
-                        acc_M = cv2.moments(contour)
-
-                        if acc_M["m00"] != 0.0:
-                            acc_cX = int(acc_M["m10"] / acc_M["m00"])
-                            acc_cY = int(acc_M["m01"] / acc_M["m00"])
-                        else:
-                            acc_cX = 0
-                            acc_cY = 0
-
-                        if prev_x <= acc_cX <= prev_x + prev_w and prev_y <= acc_cY <= prev_y + prev_h:
-                            continue
-                        else:
-
-                            my_roi.append(crop_image)
-                            # previous_M = cv2.moments(contour)
-                            # prev_cX = int(previous_M["m10"] / previous_M["m00"])
-                            # prev_cY = int(previous_M["m01"] / previous_M["m00"])
-                            prev_w = w
-                            prev_h = h
-                            prev_x = x
-                            prev_y = y
-
-                            cv2.rectangle(img_copy, (x, y), (x + w, y + h), (70, 0, 70), 3)  # drawing rectangle
-                            cv2.imshow("img_cpy", img_copy)
-                            print("rozmiar: w:", w, "h:", h)
-                            cv2.waitKey(0)
+    # i = 0
+    # my_roi = []
+    # for contour in cnts:
+    #     rect = cv2.boundingRect(contour)
+    #     (x, y, w, h) = cv2.boundingRect(contour)
+    #
+    #     if cv2.contourArea(contour) >= 0.0:#  and cv2.contourArea(contour) <= 100.0 or cv2.contourArea(contour) >= 100.0:
+    #         if w / h >= 1.0:
+    #             continue
+    #         else:
+    #             # if w < 15 or h < 35:  # if it finds smaller parts, just ignore them
+    #             if w <= 10 or h < 34 or h > 100:
+    #                 continue
+    #             else:
+    #
+    #                 crop_image = img_copy[y:y + h, x:x + w]
+    #                 red = crop_image[:, :, 2]
+    #                 green = crop_image[:, :, 1]
+    #                 blue = crop_image[:, :, 0]
+    #
+    #                 if not (len(my_roi)):
+    #
+    #                     my_roi.append(crop_image)
+    #
+    #                     # cv2.rectangle(img_copy, (x, y), (x + w, y + h), (70, 0, 70), 3)  # drawing rectangle
+    #                     # cv2.imshow("img_cpy", img_copy)
+    #                     # print("rozmiar: w:", w, "h:", h)
+    #                     # cv2.waitKey(0)
+    #                     prev_w = w
+    #                     prev_h = h
+    #                     prev_x = x
+    #                     prev_y = y
+    #
+    #                     cv2.rectangle(img_copy, (x, y), (x + w, y + h), (70, 0, 70), 3)  # drawing rectangle
+    #                     cv2.imshow("img_cpy", img_copy)
+    #                     print("rozmiar: w:", w, "h:", h)
+    #                     cv2.waitKey(0)
+    #
+    #                 else:
+    #                     acc_M = cv2.moments(contour)
+    #
+    #                     if acc_M["m00"] != 0.0:
+    #                         acc_cX = int(acc_M["m10"] / acc_M["m00"])
+    #                         acc_cY = int(acc_M["m01"] / acc_M["m00"])
+    #                     else:
+    #                         acc_cX = 0
+    #                         acc_cY = 0
+    #
+    #                     if prev_x <= acc_cX <= prev_x + prev_w and prev_y <= acc_cY <= prev_y + prev_h:
+    #                         continue
+    #                     else:
+    #
+    #                         my_roi.append(crop_image)
+    #                         prev_w = w
+    #                         prev_h = h
+    #                         prev_x = x
+    #                         prev_y = y
+    #
+    #                         cv2.rectangle(img_copy, (x, y), (x + w, y + h), (70, 0, 70), 3)  # drawing rectangle
+    #                         cv2.imshow("img_cpy", img_copy)
+    #                         print("rozmiar: w:", w, "h:", h)
+    #                         cv2.waitKey(0)
 
     # dim = (20, 32)
-    dim = (40, 70)
-    kernel = np.ones((3, 3), np.uint8)
-    for i in range(len(my_roi)):
-        # my_roi[i] = cv2.resize(my_roi[i], dim)
-        gray = cv2.cvtColor(my_roi[i], cv2.COLOR_BGR2GRAY)
-        thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+    # dim = (40, 70)
 
-        img_dilation = cv2.dilate(thresh, kernel, iterations=1)
-        img_erosion = cv2.erode(img_dilation, kernel, iterations=1)
-        my_roi[i] = img_erosion
+    my_roi = loop_find_plate(cnts, img_copy)
+    # kernel = np.ones((3, 3), np.uint8)
+    # for i in range(len(my_roi)):
+    #     # my_roi[i] = cv2.resize(my_roi[i], dim)
+    #     gray = cv2.cvtColor(my_roi[i], cv2.COLOR_BGR2GRAY)
+    #     thresh1 = cv2.threshold(gray, 125,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)[1]
+    #     my_roi[i] = thresh1
 
-    if len(my_roi) != 7:
-        for idx, elem in enumerate(my_roi):
-            if my_roi[idx].shape[1] < 12:
-                my_roi.pop(idx)
-            if my_roi[idx].shape[0] / my_roi[idx].shape[1] >= 1.1:
-                continue
-            else:
-                my_roi.pop(idx)
-
+    if len(my_roi) == 7:
         for i in range(len(my_roi)):
-            cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/roi" + str(i) + ".jpg", my_roi[i])
+            gray = cv2.cvtColor(my_roi[i], cv2.COLOR_BGR2GRAY)
+            thresh1 = cv2.threshold(gray, 125, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+            cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/roi" + str(i) + ".jpg", thresh1)
+    else:
+        gray_3 = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray_3 = cv2.bilateralFilter(gray_3, 10, 28, 28)
+        edged_3 = cv2.Canny(gray_3, 25, 400)
+        cnts = cv2.findContours(edged_3.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+        (cnts, _) = contours.sort_contours(cnts, method="le ft-to-right")
+        new_roi = loop_find_plate(cnts, img_copy)
+
+        if len(new_roi) == 7:
+            for i in range(len(my_roi)):
+                gray = cv2.cvtColor(new_roi[i], cv2.COLOR_BGR2GRAY)
+                thresh1 = cv2.threshold(gray, 125, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+                cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/roi" + str(i) + ".jpg", thresh1)
+
+        else:
+            for i in range(len(new_roi)):
+                # if 30 < new_roi[i].shape[0] < 65:
+                #     print("i", i, "rozmiar", new_roi[i].shape)
+                gray = cv2.cvtColor(new_roi[i], cv2.COLOR_BGR2GRAY)
+                thresh1 = cv2.threshold(gray, 125, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+                print("img_shape_here #################")
+                print(new_roi[i].shape)
+                cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/roi" + str(i) + ".jpg", thresh1)
+
+
+
+
+
+
+
+
+
+    # if len(my_roi) != 7:
+    #     for idx, elem in enumerate(my_roi):
+    #         if my_roi[idx].shape[1] < 12:
+    #             my_roi.pop(idx)
+    #         if my_roi[idx].shape[0] / my_roi[idx].shape[1] >= 1.1:
+    #             continue
+    #         else:
+    #             my_roi.pop(idx)
+    # else:
+
 
     cv2.destroyAllWindows()
 
