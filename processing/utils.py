@@ -1,6 +1,6 @@
 import imutils
 from imutils import contours
-from neural_network import *
+from processing.neural_network import *
 
 
 def order_points(pts):
@@ -202,4 +202,5 @@ def perform_processing(image: np.ndarray) -> str:
     nr = len(letters)
     result = recognize(nr)
     return result
+
     # return 'PO12345'
