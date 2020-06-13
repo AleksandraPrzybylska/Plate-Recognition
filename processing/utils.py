@@ -194,13 +194,14 @@ def perform_processing(image: np.ndarray) -> str:
                 letters[i] = cv2.resize(letters[i], dim)
                 gray = cv2.cvtColor(letters[i], cv2.COLOR_BGR2GRAY)
                 thresh1 = cv2.threshold(gray, 125, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-                cv2.imwrite("Plate/roi" + str(i) + ".jpg", thresh1)
+                cv2.imwrite("dane/plate_roi/roi" + str(i) + ".jpg", thresh1)
             except Exception as e:
                 error = True
 
     cv2.destroyAllWindows()
     nr = len(letters)
     result = recognize(nr)
+    result = ''.join([str(elem) for elem in result])
     return result
 
     # return 'PO12345'
