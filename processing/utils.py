@@ -1,8 +1,7 @@
-import cv2
-import numpy as np
 import imutils
 from imutils import contours
-from skimage.filters import threshold_local
+# from trial import *
+from main import *
 
 def order_points(pts):
 	# initialzie a list of coordinates that will be ordered
@@ -121,6 +120,8 @@ def get_contours(image, bil1, bil2, bil3, canny1, canny2):
     cnts = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     cnts = cnts[0] if len(cnts) == 2 else cnts[1]
 
+    if len(cnts) == 0:
+        print("zero konturów")
     return cnts
 
 def perform_processing(image: np.ndarray) -> str:
@@ -129,14 +130,14 @@ def perform_processing(image: np.ndarray) -> str:
 
     image = imutils.resize(image, width=min(500, len(image[0])))
     img_copy = np.copy(image)
-    cv2.imshow("Original Image", image)
-    cv2.waitKey(0)
+    # cv2.imshow("Original Image", image)
+    # cv2.waitKey(0)
 
     cnts = get_contours(image, 11, 20, 20, 50, 200)
     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
     NumberPlateCnt = np.zeros((4, 1, 2))
 
-    idx = 7
+    idx = 8
     for c in cnts:
         peri = cv2.arcLength(c, True)
         approx = cv2.approxPolyDP(c, 0.02 * peri, True)
@@ -178,47 +179,57 @@ def perform_processing(image: np.ndarray) -> str:
 
         new_copy = np.copy(new_img)
         cnts = get_contours(new_img, 10, 28, 28, 24, 200)
-        (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
+        if len(cnts):
+            (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
         img_copy = new_copy
 
     else:
         cnts = get_contours(image, 10, 28, 28, 25, 285)
-        (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
+        if len(cnts):
+            (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
 
-
-    # letters = []
+    letters = []
     my_roi = loop_find_plate(cnts, img_copy)
-
+    letters = my_roi
     if len(my_roi) == 7:
         letters = my_roi
     else:
         cnts = get_contours(image, 10, 28, 28, 200, 545)
-        (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
+        if len(cnts):
+            (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
         new_roi = loop_find_plate(cnts, img_copy)
 
         if len(new_roi) == 7:
             letters = new_roi
         else:
             cnts = get_contours(image, 10, 28, 28, 60, 600)
-            (cnts, _) = contours.sort_contours(cnts, method="le ft-to-right")
+            if len(cnts):
+                (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
             next_roi = loop_find_plate(cnts, img_copy)
 
             letters = []
 
             for i in range(len(next_roi)):
+                if next_roi[i].shape[1] == 0:
+                    break
                 x = next_roi[i].shape[0] / next_roi[i].shape[1]
                 if x >= 4.0 or x <= 1.24:
                     continue
                 else:
                     letters.append(next_roi[i])
-    dim = (20, 32)
-
-    for i in range(len(letters)):
-        letters[i] = cv2.resize(letters[i], dim)
-        gray = cv2.cvtColor(letters[i], cv2.COLOR_BGR2GRAY)
-        thresh1 = cv2.threshold(gray, 125, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-        cv2.imwrite("/home/aleksandra/Desktop/SW_PROJECT/ROI/roi" + str(i) + ".jpg", thresh1)
+    if len(letters):
+        dim = (20, 32)
+        for i in range(len(letters)):
+            try:
+                letters[i] = cv2.resize(letters[i], dim)
+                gray = cv2.cvtColor(letters[i], cv2.COLOR_BGR2GRAY)
+                thresh1 = cv2.threshold(gray, 125, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+                cv2.imwrite("Plate/roi" + str(i) + ".jpg", thresh1)
+            except Exception as e:
+                error = True
 
     cv2.destroyAllWindows()
 
-    return 'PO12345'
+    result = recognize()
+    return result
+    # return 'PO12345'
