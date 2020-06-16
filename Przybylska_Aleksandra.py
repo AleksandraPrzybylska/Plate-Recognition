@@ -2,9 +2,7 @@ import argparse
 import json
 from pathlib import Path
 from time import perf_counter
-
 import cv2
-
 from processing.utils import perform_processing
 
 

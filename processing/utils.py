@@ -93,13 +93,14 @@ def get_contours(image, bil1, bil2, bil3, canny1, canny2):
     return cnts
 
 
+# Function that process photo and returns the result of neural network
 def perform_processing(image: np.ndarray) -> str:
     print(f'image.shape: {image.shape}')
 
     # Resize the image
     image = imutils.resize(image, width=min(500, len(image[0])))
     img_copy = np.copy(image)
-    cv2.imshow("image", image)
+    # cv2.imshow("image", image)
 
     # Get and sort the found contours
     cnts = get_contours(image, 11, 20, 20, 50, 200)
@@ -191,9 +192,11 @@ def perform_processing(image: np.ndarray) -> str:
             (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
         new_roi = loop_find_numbers(cnts, img_copy)
 
+        # If it finds 7, just save it to letters
         if len(new_roi) == 7:
             letters = new_roi
 
+            # Check if there is no empty arrays added to letters
             for i in range(len(letters)):
                 if letters[i].shape[0] == 0 or letters[i].shape[1] == 1:
                     empty = True
@@ -209,6 +212,7 @@ def perform_processing(image: np.ndarray) -> str:
                 if letters[i].shape[0] == 0 or letters[i].shape[1] == 1:
                     empty = True
 
+            # Reject images that are smaller  or bigger that this ratio of dimensions
             for i in range(len(next_roi)):
                 if next_roi[i].shape[1] == 0:
                     break
@@ -218,6 +222,7 @@ def perform_processing(image: np.ndarray) -> str:
                 else:
                     letters.append(next_roi[i])
 
+            # If it finds more letters than 7, check if there are any smaller images that are not numbers
             if len(letters) > 7:
                 suma = 0
                 for idx, elem in enumerate(letters):
@@ -230,11 +235,11 @@ def perform_processing(image: np.ndarray) -> str:
                         l.append(elem)
                 letters = l
 
+    # If there are any empty arrays or found less then 7 signs, then filter the photo again and find contours
     if empty or len(letters) < 7:
         cnts = get_contours(image, 20, 30, 30, 200, 430)
         if len(cnts):
             (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
-
         letters = loop_find_numbers(cnts, image)
 
     # Resize the letters with specific dimensions
@@ -248,7 +253,8 @@ def perform_processing(image: np.ndarray) -> str:
                 cv2.imwrite("dane/plate_roi/roi" + str(i) + ".jpg", thresh1)
             except Exception as e:
                 error = True
-    cv2.waitKey(0)
+
+    # cv2.waitKey(0)
     cv2.destroyAllWindows()
     nr = len(letters)
     if len(letters) == 0:
@@ -256,6 +262,7 @@ def perform_processing(image: np.ndarray) -> str:
     else:
         result = recognize(nr)
         result = ''.join([str(elem) for elem in result]) # delete the spaces between the characters
+
 
     if len(result) < 7:
         liczba = 7 - len(result)
