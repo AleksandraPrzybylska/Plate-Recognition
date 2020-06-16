@@ -3,6 +3,7 @@ from imutils import contours
 from processing.neural_network import *
 
 
+# Get four points of the rectangle
 def order_points(pts):
     rect = np.zeros((4, 2), dtype="float32")
     s = pts.sum(axis=1)
@@ -14,6 +15,7 @@ def order_points(pts):
     return rect
 
 
+# Transform rectangle to straighten the picture
 def four_point_transform(image, pts):
     rect = order_points(pts)
     (tl, tr, br, bl) = rect
@@ -33,7 +35,8 @@ def four_point_transform(image, pts):
     return warped
 
 
-def loop_find_number(cnts, img_copy):
+# Get the numbers from plate
+def loop_find_numbers(cnts, img_copy):
 
     my_roi = []
     for contour in cnts:
@@ -80,7 +83,8 @@ def loop_find_number(cnts, img_copy):
     return my_roi
 
 
-def find_contours(image, bil1, bil2, bil3, canny1, canny2):
+# Filter with canny and find contours on the image
+def get_contours(image, bil1, bil2, bil3, canny1, canny2):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     bilateral = cv2.bilateralFilter(gray, bil1, bil2, bil3)
     edged = cv2.Canny(bilateral, canny1, canny2)
@@ -95,11 +99,15 @@ def perform_processing(image: np.ndarray) -> str:
     # Resize the image
     image = imutils.resize(image, width=min(500, len(image[0])))
     img_copy = np.copy(image)
+    cv2.imshow("image", image)
 
-    # Find contours of the image
-    cnts = find_contours(image, 11, 20, 20, 50, 200)
+    # Get and sort the found contours
+    cnts = get_contours(image, 11, 20, 20, 50, 200)
     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
     NumberPlateCnt = np.zeros((4, 1, 2))
+
+    found = False  # If plate isn't found, try other method to localize it
+    empty = False  # If the array of letters is filled with empty elements
 
     # Go through loop and find the plate on the image
     idx = 7
@@ -114,7 +122,23 @@ def perform_processing(image: np.ndarray) -> str:
                 NumberPlateCnt = np.zeros((4, 1, 2))
             else:
                 idx += 1
+                found = True
             break
+
+    if not found:
+        for c in cnts:
+            hull = cv2.convexHull(c)
+            approx2 = cv2.approxPolyDP(hull, 0.02 * cv2.arcLength(hull, True), True)
+            if len(approx2) == 4:
+                NumberPlateCnt = approx2
+                x, y, w, h = cv2.boundingRect(c)
+                new_img = image[y:y + h, x:x + w]
+
+                if new_img.shape[0] < 60 or new_img.shape[1] < 100 or new_img.shape[1] >= 500:
+                    NumberPlateCnt = np.zeros((4, 1, 2))
+                else:
+                    idx += 1
+                break
 
     #   When you find the Number Plate, straighten it and find the letters
     if np.sum(NumberPlateCnt):
@@ -147,35 +171,43 @@ def perform_processing(image: np.ndarray) -> str:
 
         # Find contours on the plate to identify the letters
         new_copy = np.copy(new_img)
-        cnts = find_contours(new_img, 10, 28, 28, 24, 200)
+        cnts = get_contours(new_img, 10, 28, 28, 24, 200)
         if len(cnts):
             (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
         img_copy = new_copy
 
     else:
-        cnts = find_contours(image, 10, 28, 28, 25, 285)
+        cnts = get_contours(image, 10, 28, 28, 25, 285)
         if len(cnts):
             (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
 
     # If it finds letter, then save it, else filter the picture and find contours
-    my_roi = loop_find_number(cnts, img_copy)
+    my_roi = loop_find_numbers(cnts, img_copy)
     if len(my_roi) == 7:
         letters = my_roi
     else:
-        cnts = find_contours(image, 10, 28, 28, 200, 545)
+        cnts = get_contours(image, 10, 28, 28, 200, 545)
         if len(cnts):
             (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
-        new_roi = loop_find_number(cnts, img_copy)
+        new_roi = loop_find_numbers(cnts, img_copy)
 
         if len(new_roi) == 7:
             letters = new_roi
+
+            for i in range(len(letters)):
+                if letters[i].shape[0] == 0 or letters[i].shape[1] == 1:
+                    empty = True
         else:
-            cnts = find_contours(image, 10, 28, 28, 60, 600)
+            cnts = get_contours(image, 10, 28, 28, 60, 600)
             if len(cnts):
                 (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
-            next_roi = loop_find_number(cnts, img_copy)
+            next_roi = loop_find_numbers(cnts, img_copy)
 
             letters = []
+
+            for i in range(len(letters)):
+                if letters[i].shape[0] == 0 or letters[i].shape[1] == 1:
+                    empty = True
 
             for i in range(len(next_roi)):
                 if next_roi[i].shape[1] == 0:
@@ -185,6 +217,25 @@ def perform_processing(image: np.ndarray) -> str:
                     continue
                 else:
                     letters.append(next_roi[i])
+
+            if len(letters) > 7:
+                suma = 0
+                for idx, elem in enumerate(letters):
+                    suma += elem.shape[0]
+                suma = round(suma/ len(letters))
+
+                l = []
+                for idx, elem in enumerate(letters):
+                    if (suma - 5) < elem.shape[0] < (suma + 5):
+                        l.append(elem)
+                letters = l
+
+    if empty or len(letters) < 7:
+        cnts = get_contours(image, 20, 30, 30, 200, 430)
+        if len(cnts):
+            (cnts, _) = contours.sort_contours(cnts, method="left-to-right")
+
+        letters = loop_find_numbers(cnts, image)
 
     # Resize the letters with specific dimensions
     if len(letters):
@@ -197,11 +248,29 @@ def perform_processing(image: np.ndarray) -> str:
                 cv2.imwrite("dane/plate_roi/roi" + str(i) + ".jpg", thresh1)
             except Exception as e:
                 error = True
-
+    cv2.waitKey(0)
     cv2.destroyAllWindows()
     nr = len(letters)
-    result = recognize(nr)
-    result = ''.join([str(elem) for elem in result])
-    return result
+    if len(letters) == 0:
+        result = 'XXXXXXX'
+    else:
+        result = recognize(nr)
+        result = ''.join([str(elem) for elem in result]) # delete the spaces between the characters
 
-    # return 'PO12345'
+    if len(result) < 7:
+        liczba = 7 - len(result)
+        for i in range(liczba):
+            result = result + 'X'
+    if len(result) > 7:
+        result = result[:7]
+
+
+    if len(result) == 7:
+        # If it finds the 0 on the second place, change it into O
+        if result[1] == '0':
+            result = result[:1] + "O" + result[2:]
+
+        if result[1] == 'G' and result[2] == 'N':
+            result = "P" + result[1:]
+
+    return result

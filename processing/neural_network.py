@@ -1,4 +1,4 @@
-from processing.modify_picture import *
+from processing.data_import import *
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
@@ -10,8 +10,8 @@ def recognize(nr):
 
     y_train_encoded = to_categorical(y_train)
 
-    x_train_reshaped = np.reshape(x_train, (350, 640))
-    x_test_reshaped = np.reshape(x_test, (nr , 640))
+    x_train_reshaped = np.reshape(x_train, (700, 640))
+    x_test_reshaped = np.reshape(x_test, (nr, 640))
 
     x_mean = np.mean(x_train_reshaped)
     x_std = np.std(x_train_reshaped)
@@ -22,7 +22,7 @@ def recognize(nr):
     x_test_norm = (x_test_reshaped - x_mean) / (x_std + epsilon)
 
     model = Sequential([
-        Dense(500, activation='relu', input_shape=(640,)),
+        Dense(410, activation='relu', input_shape=(640,)),
         Dense(150, activation='relu'),
         Dense(80, activation='relu'),
         Dense(40, activation='relu'),
@@ -36,7 +36,7 @@ def recognize(nr):
     )
 
     model.summary()
-    model.fit(x_train_norm, y_train_encoded, epochs=40)
+    model.fit(x_train_norm, y_train_encoded, epochs=23)
     preds = model.predict(x_test_norm)
 
     # translate numbers to signs
