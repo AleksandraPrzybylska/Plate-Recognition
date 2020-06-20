@@ -19,18 +19,16 @@ def main():
     results = {}
 
     t1_start = perf_counter()
-    i = 0
     for image_path in images_paths:
         image = cv2.imread(str(image_path))
         if image is None:
             print(f'Error loading image {image_path}')
             continue
-        results[image_path.name] = perform_processing(image)
-        i += 1
 
+        results[image_path.name] = perform_processing(image)
     t1_stop = perf_counter()
     print("Elapsed time during the whole program in seconds:",t1_stop - t1_start)
-    print("liczba zdjec:", i)
+    # print("liczba zdjec:", i)
     with results_file.open('w') as output_file:
         json.dump(results, output_file, indent=4)
 

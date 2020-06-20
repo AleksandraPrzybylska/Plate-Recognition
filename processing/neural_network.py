@@ -2,9 +2,11 @@ from processing.data_import import *
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
+import tensorflow as tf
 
 
-def recognize(nr):
+def recognize(nr, iteracja):
+
     # Import dataset
     train_answer, train_images, test_answer, test_images = ex(nr)
     (x_train, y_train) = (train_images, train_answer)
@@ -26,25 +28,32 @@ def recognize(nr):
     x_train_norm = (x_train_reshaped - x_mean) / (x_std + epsilon)
     x_test_norm = (x_test_reshaped - x_mean) / (x_std + epsilon)
 
-    # Creating the Model
-    model = Sequential([
-        Dense(410, activation='relu', input_shape=(640,)),  # input layer
-        Dense(150, activation='relu'),  # three hidden layers
-        Dense(80, activation='relu'),
-        Dense(40, activation='relu'),
-        Dense(35, activation='softmax')  # output layer
-    ])
+    if iteracja == 0:
+        # Creating the Model
+        model = Sequential([
+            Dense(600, activation='relu', input_shape=(640,)),  # input layer
+            Dense(300, activation='relu'),  # three hidden layers
+            Dense(150, activation='relu'),
+            Dense(75, activation='relu'),
+            Dense(35, activation='softmax')  # output layer
+        ])
 
-    # Compiling the Model
-    model.compile(
-        optimizer='sgd',
-        loss='categorical_crossentropy',
-        metrics=['accuracy']
-    )
-    model.summary()
+        # Compiling the Model
+        model.compile(
+            optimizer='sgd',
+            loss='categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        model.summary()
 
-    # Training the model with epochs
-    model.fit(x_train_norm, y_train_encoded, epochs=23)
+        # Training the model with epochs
+        model.fit(x_train_norm, y_train_encoded, epochs=50)
+
+        model.save('recognize-letters.model')
+
+    else:
+        model = tf.keras.models.load_model('recognize-letters.model')
+
 
     # Predictions on Test Set
     preds = model.predict(x_test_norm)
@@ -60,5 +69,4 @@ def recognize(nr):
         pred = np.argmax(preds[start_index + i])
         l.append(pattern_transl[pred])
 
-    print("recognized: ", l)
     return l

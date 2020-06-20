@@ -2,6 +2,7 @@ import imutils
 from imutils import contours
 from processing.neural_network import *
 
+iteracja=0
 
 # Get four points of the rectangle
 def order_points(pts):
@@ -96,6 +97,7 @@ def get_contours(image, bil1, bil2, bil3, canny1, canny2):
 # Function that process photo and returns the result of neural network
 def perform_processing(image: np.ndarray) -> str:
     print(f'image.shape: {image.shape}')
+    global iteracja
 
     # Resize the image
     image = imutils.resize(image, width=min(500, len(image[0])))
@@ -255,12 +257,12 @@ def perform_processing(image: np.ndarray) -> str:
                 error = True
 
     # cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # cv2.destroyAllWindows()
     nr = len(letters)
     if len(letters) == 0:
         result = 'XXXXXXX'
     else:
-        result = recognize(nr)
+        result = recognize(nr, iteracja)
         result = ''.join([str(elem) for elem in result]) # delete the spaces between the characters
 
 
@@ -279,5 +281,7 @@ def perform_processing(image: np.ndarray) -> str:
 
         if result[1] == 'G' and result[2] == 'N':
             result = "P" + result[1:]
+    print(result)
+    iteracja += 1
 
     return result
