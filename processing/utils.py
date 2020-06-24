@@ -259,8 +259,9 @@ def perform_processing(image: np.ndarray) -> str:
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
     nr = len(letters)
+
     if len(letters) == 0:
-        result = 'XXXXXXX'
+        result = '???????'
     else:
         result = recognize(nr, iteracja)
         result = ''.join([str(elem) for elem in result]) # delete the spaces between the characters
@@ -269,19 +270,23 @@ def perform_processing(image: np.ndarray) -> str:
     if len(result) < 7:
         liczba = 7 - len(result)
         for i in range(liczba):
-            result = result + 'X'
+            result = result + '?'
     if len(result) > 7:
-        result = result[:7]
-
+        l = len(result) - 7
+        result = result[l:]
 
     if len(result) == 7:
         # If it finds the 0 on the second place, change it into O
         if result[1] == '0':
             result = result[:1] + "O" + result[2:]
 
+        if result[0] == '9':
+            result = "P" + result[1:]
+
         if result[1] == 'G' and result[2] == 'N':
             result = "P" + result[1:]
-    print(result)
+
+    # print(result)
     iteracja += 1
 
     return result
