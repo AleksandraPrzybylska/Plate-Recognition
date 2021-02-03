@@ -20,6 +20,9 @@ The aim of the project is to write a license plate recognition program. The phot
 - It is possible to use external libraries (e.g. scikit-image), but it is not allowed to use external OCR modules or ready-made, trained models that enable reading characters.
 - The maximum processing time is 2s for each photo.
 
+### Example
+![example_car](https://user-images.githubusercontent.com/61732852/106760932-9c353f80-6634-11eb-87b3-054bd87f9a50.PNG)
+![car_result](https://user-images.githubusercontent.com/61732852/106761243-e8807f80-6634-11eb-873e-4bdffdd2e51e.PNG)
 
 ## Technologies
 Project is created with:
