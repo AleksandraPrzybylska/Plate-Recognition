@@ -35,8 +35,10 @@ All the necessary libraries are in the requirements file. You can install with a
 $ pip install -r requirements.txt
 ```
 
-To run this project:
+To run this project, you need to pass two arguments:
+ - path to images directory,
+ - path to output json file
 
 ```
-$ python main.py "images_dir" "results_file_json"
+$ python main.py images_dir results_file_json
 ```
