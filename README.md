@@ -34,3 +34,9 @@ All the necessary libraries are in the requirements file. You can install with a
 ```
 $ pip install -r requirements.txt
 ```
+
+To run this project:
+
+```
+$ python main.py "images_dir" "results_file_json"
+```
