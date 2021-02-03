@@ -5,7 +5,7 @@
 
 ## General info
 
-# Project Purpose
+### Project Purpose
 The aim of the project is to write a license plate recognition program. The photos will be taken with a smartphone or a camera with the following assumptions:
 - boards in the photos will be inclined no more than ± 45 degrees from the horizontal position,
 - the longer edge of the board covers over one third of the photo width,
@@ -15,7 +15,7 @@ The aim of the project is to write a license plate recognition program. The phot
 - plaques will also come from outside Poznań,
 - photos can be of different resolution.
 	
-# Requirements
+### Requirements
 - Programs should be written in Python version 3.7, using the OpenCV library.
 - It is possible to use external libraries (e.g. scikit-image), but it is not allowed to use external OCR modules or ready-made, trained models that enable reading characters.
 - The maximum processing time is 2s for each photo.
