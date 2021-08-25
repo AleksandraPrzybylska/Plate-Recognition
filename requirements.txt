@@ -3,4 +3,4 @@ setuptools==47.1.1
 numpy==1.18.5
 opencv-python==4.2.0.34
 imutils==0.5.3
-tensorflow==2.2.0
+tensorflow==2.5.1
